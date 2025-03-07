@@ -1,6 +1,9 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional  # <-- ADD THIS
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
 class Settings(BaseSettings):
     ADMIN_EMAIL: str
@@ -16,6 +19,5 @@ class Settings(BaseSettings):
     TOKEN_EXPIRE_MINUTES: int = 60
     LLM_API_KEY: Optional[str] = None
     LLM_API_ENDPOINT: Optional[str] = None
-
 
 settings = Settings()
