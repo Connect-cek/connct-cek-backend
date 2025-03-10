@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+python-jose
+python-multipart
+email-validator
+aiofiles
+pydantic
+pydantic-settings
+pytest
+httpx
+python-dotenv
+docling
+sendgrid
