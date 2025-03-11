@@ -66,3 +66,13 @@ async def get_current_admin(current_user: User = Depends(get_current_user)) -> U
             detail="Not authorized to access this resource",
         )
     return current_user
+
+
+def check_institution_access(user: User, target_institution_id: int) -> bool:
+    """Check if a user has access to a specific institution."""
+    # Admin has access to all institutions
+    if user.role == UserRole.ADMIN and user.email == settings.ADMIN_EMAIL:
+        return True
+    
+    # Other users only have access to their own institution
+    return user.institution_id == target_institution_id

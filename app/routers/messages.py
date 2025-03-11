@@ -52,6 +52,14 @@ async def send_message(
             detail="Recipient not found or not active",
         )
 
+    # Check if users belong to the same institution (except for admin)
+    if current_user.role != UserRole.ADMIN and recipient.role != UserRole.ADMIN:
+        if current_user.institution_id != recipient.institution_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only message users from your institution",
+            )
+
     # Check if messaging is allowed between these roles
     if not can_message(current_user.role, recipient.role):
         raise HTTPException(

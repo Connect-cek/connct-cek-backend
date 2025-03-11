@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 import json
 from ..database import get_db
 from ..schemas.users import UserRegister, User as UserSchema
 from ..schemas.profiles import Profile as ProfileSchema, ProfileUpdate
 from ..models.users import User, UserStatus, UserRole
 from ..models.profiles import Profile
+from ..models.institutions import Institution
 from ..utils.auth import get_current_user
 from ..services.file_service import FileService
 from ..config import settings
@@ -19,6 +20,7 @@ async def register_user(
     name: str = Form(...),
     email: str = Form(...),
     role: str = Form(...),
+    institution_id: int = Form(...),
     year_of_study: Optional[str] = Form(None),
     course: Optional[str] = Form(None),
     fields_of_interest: Optional[str] = Form(None),  # JSON string
@@ -33,6 +35,24 @@ async def register_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
+    
+    # Check if institution exists
+    institution = db.query(Institution).filter(Institution.institution_id == institution_id).first()
+    if not institution:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Institution not found"
+        )
+    
+    # Verify email domain matches institution's registration email domain
+    user_email_domain = email.split('@')[1]
+    institution_email_domain = institution.registration_email.split('@')[1]
+    
+    # For non-admin users, enforce email domain matching
+    if role != UserRole.ADMIN and user_email_domain != institution_email_domain:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"Email domain must match institution's domain: {institution_email_domain}"
+        )
 
     # Create new user
     if email == settings.ADMIN_EMAIL:
@@ -41,6 +61,7 @@ async def register_user(
             email=email,
             role=UserRole.ADMIN,
             status=UserStatus.ACTIVE,
+            institution_id=institution_id,
         )
     else:
         new_user = User(
@@ -48,6 +69,7 @@ async def register_user(
             email=email,
             role=role,
             status=UserStatus.PENDING,
+            institution_id=institution_id,
         )
     db.add(new_user)
     db.commit()
@@ -131,3 +153,24 @@ async def update_profile(
     db.commit()
     db.refresh(profile)
     return profile
+
+
+@router.get("/institution-users", response_model=List[UserSchema])
+async def get_institution_users(
+    role: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get users from the same institution as the current user."""
+    query = db.query(User).filter(
+        User.institution_id == current_user.institution_id,
+        User.status == UserStatus.ACTIVE,
+        User.user_id != current_user.user_id  # Exclude current user
+    )
+    
+    # Filter by role if specified
+    if role:
+        query = query.filter(User.role == role)
+    
+    users = query.all()
+    return users

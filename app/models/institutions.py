@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Enum, DateTime
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from ..database import Base
 import enum
 
@@ -22,3 +23,5 @@ class Institution(Base):
     registration_email = Column(String, nullable=False, unique=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    users = relationship("User", back_populates="institution")

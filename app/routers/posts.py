@@ -4,7 +4,7 @@ from typing import List, Optional
 from ..database import get_db
 from ..schemas.posts import PostCreate, Post, PostWithUser
 from ..models.posts import Post as PostModel
-from ..models.users import User, UserStatus
+from ..models.users import User, UserStatus, UserRole
 from ..utils.auth import get_current_user, get_current_admin
 from sqlalchemy import or_
 
@@ -39,6 +39,10 @@ async def get_posts(
     query = db.query(
         PostModel, User.name.label("user_name"), User.role.label("user_role")
     ).join(User)
+    
+    # Filter by institution (except for admin)
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(User.institution_id == current_user.institution_id)
 
     # Apply filters
     if keyword:

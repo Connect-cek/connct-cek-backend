@@ -8,6 +8,7 @@ from ..models.users import User, UserStatus
 from ..models.messages import Message as MessageModel
 from ..utils.auth import get_current_admin
 import uuid
+from ..config import settings
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -17,7 +18,16 @@ async def get_pending_registrations(
     db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)
 ):
     """Get all pending user registrations."""
-    pending_users = db.query(User).filter(User.status == UserStatus.PENDING).all()
+    # Super admin can see all pending registrations
+    if current_admin.email == settings.ADMIN_EMAIL:
+        pending_users = db.query(User).filter(User.status == UserStatus.PENDING).all()
+    else:
+        # Institution admin can only see pending registrations from their institution
+        pending_users = db.query(User).filter(
+            User.status == UserStatus.PENDING,
+            User.institution_id == current_admin.institution_id
+        ).all()
+    
     return pending_users
 
 

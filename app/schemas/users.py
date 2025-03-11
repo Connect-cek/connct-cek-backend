@@ -8,17 +8,20 @@ class UserRole(str, Enum):
     STUDENT = "student"
     ALUMNI = "alumni"
     MENTOR = "mentor"
+    ADMIN = "admin"
 
 
 class UserStatus(str, Enum):
     PENDING = "pending"
     ACTIVE = "active"
+    SUSPENDED = "suspended"
 
 
 class UserBase(BaseModel):
     email: EmailStr
     name: str
     role: UserRole
+    institution_id: Optional[int] = None
 
 
 class UserRegister(UserBase):
