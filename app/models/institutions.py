@@ -10,6 +10,12 @@ class InstitutionType(str, enum.Enum):
     GOVERNMENT = "government"
 
 
+class InstitutionStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class Institution(Base):
     __tablename__ = "institutions"
 
@@ -21,6 +27,7 @@ class Institution(Base):
     head_name = Column(String, nullable=False)
     head_designation = Column(String, nullable=False)
     registration_email = Column(String, nullable=False, unique=True)
+    status = Column(Enum(InstitutionStatus), default=InstitutionStatus.PENDING)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

@@ -39,7 +39,7 @@ async def get_posts(
     query = db.query(
         PostModel, User.name.label("user_name"), User.role.label("user_role")
     ).join(User)
-    
+
     # Filter by institution (except for admin)
     if current_user.role != UserRole.ADMIN:
         query = query.filter(User.institution_id == current_user.institution_id)

@@ -23,11 +23,15 @@ async def get_pending_registrations(
         pending_users = db.query(User).filter(User.status == UserStatus.PENDING).all()
     else:
         # Institution admin can only see pending registrations from their institution
-        pending_users = db.query(User).filter(
-            User.status == UserStatus.PENDING,
-            User.institution_id == current_admin.institution_id
-        ).all()
-    
+        pending_users = (
+            db.query(User)
+            .filter(
+                User.status == UserStatus.PENDING,
+                User.institution_id == current_admin.institution_id,
+            )
+            .all()
+        )
+
     return pending_users
 
 

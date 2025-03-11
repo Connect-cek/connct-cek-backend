@@ -73,6 +73,6 @@ def check_institution_access(user: User, target_institution_id: int) -> bool:
     # Admin has access to all institutions
     if user.role == UserRole.ADMIN and user.email == settings.ADMIN_EMAIL:
         return True
-    
+
     # Other users only have access to their own institution
     return user.institution_id == target_institution_id

@@ -35,23 +35,27 @@ async def register_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
-    
+
     # Check if institution exists
-    institution = db.query(Institution).filter(Institution.institution_id == institution_id).first()
+    institution = (
+        db.query(Institution)
+        .filter(Institution.institution_id == institution_id)
+        .first()
+    )
     if not institution:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Institution not found"
         )
-    
+
     # Verify email domain matches institution's registration email domain
-    user_email_domain = email.split('@')[1]
-    institution_email_domain = institution.registration_email.split('@')[1]
-    
+    user_email_domain = email.split("@")[1]
+    institution_email_domain = institution.registration_email.split("@")[1]
+
     # For non-admin users, enforce email domain matching
     if role != UserRole.ADMIN and user_email_domain != institution_email_domain:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail=f"Email domain must match institution's domain: {institution_email_domain}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Email domain must match institution's domain: {institution_email_domain}",
         )
 
     # Create new user
@@ -165,12 +169,12 @@ async def get_institution_users(
     query = db.query(User).filter(
         User.institution_id == current_user.institution_id,
         User.status == UserStatus.ACTIVE,
-        User.user_id != current_user.user_id  # Exclude current user
+        User.user_id != current_user.user_id,  # Exclude current user
     )
-    
+
     # Filter by role if specified
     if role:
         query = query.filter(User.role == role)
-    
+
     users = query.all()
     return users

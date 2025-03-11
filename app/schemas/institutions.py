@@ -9,6 +9,12 @@ class InstitutionType(str, Enum):
     GOVERNMENT = "government"
 
 
+class InstitutionStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class InstitutionBase(BaseModel):
     name: str
     institution_type: InstitutionType
@@ -31,10 +37,12 @@ class InstitutionUpdate(BaseModel):
     head_name: Optional[str] = None
     head_designation: Optional[str] = None
     registration_email: Optional[EmailStr] = None
+    status: Optional[InstitutionStatus] = None
 
 
 class Institution(InstitutionBase):
     institution_id: int
+    status: InstitutionStatus = InstitutionStatus.PENDING
     created_at: datetime
     updated_at: Optional[datetime] = None
 

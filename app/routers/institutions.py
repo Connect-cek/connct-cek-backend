@@ -4,7 +4,7 @@ from typing import List
 from ..database import get_db
 from ..schemas.institutions import Institution as InstitutionSchema
 from ..schemas.institutions import InstitutionCreate, InstitutionUpdate
-from ..models.institutions import Institution
+from ..models.institutions import Institution, InstitutionStatus
 from ..utils.auth import get_current_admin
 
 router = APIRouter(prefix="/institutions", tags=["Institutions"])
@@ -30,8 +30,10 @@ async def create_institution(
             detail="Institution with this registration email already exists",
         )
 
-    # Create new institution
-    new_institution = Institution(**institution.dict())
+    # Create new institution with pending status
+    new_institution = Institution(
+        **institution.model_dump(), status=InstitutionStatus.PENDING
+    )
     db.add(new_institution)
     db.commit()
     db.refresh(new_institution)
