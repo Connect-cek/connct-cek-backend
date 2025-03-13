@@ -11,7 +11,6 @@ from ..config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-
 @router.post("/send-otp", response_model=OTPResponse)
 async def send_otp(otp_request: OTPRequest, db: Session = Depends(get_db)):
     """Send an OTP to the provided email."""
@@ -38,25 +37,34 @@ async def send_otp(otp_request: OTPRequest, db: Session = Depends(get_db)):
 @router.post("/verify-otp")
 async def verify_otp(otp_verify: OTPVerify, db: Session = Depends(get_db)):
     """Verify the OTP provided by the user."""
-    is_valid = OTPService.verify_otp(db, otp_verify.email, otp_verify.otp_code)
+    try:
+        is_valid = OTPService.verify_otp(db, otp_verify.email, otp_verify.otp_code)
 
-    if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP"
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired OTP"
+            )
+
+        # Check if user exists (for returning users)
+        user = db.query(User).filter(User.email == otp_verify.email).first()
+
+        # Generate access token
+        access_token_expires = timedelta(minutes=settings.TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": otp_verify.email},
+            expires_delta=access_token_expires
         )
 
-    # Check if user exists (for returning users)
-    user = db.query(User).filter(User.email == otp_verify.email).first()
-
-    # Generate access token
-    access_token_expires = timedelta(minutes=settings.TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": otp_verify.email}, expires_delta=access_token_expires
-    )
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user_exists": user is not None,
-        "user_status": user.status if user else None,
-    }
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_exists": user is not None,
+            "user_status": user.status if user else None,
+        }
+    except Exception as e:
+        print(f"Error in verify_otp: {str(e)}")  # Add logging
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
