@@ -1,8 +1,11 @@
 import os
 from openai import OpenAI  # Ensure you have the correct OpenAI library installed
-from fastapi import Request,APIRouter
+from fastapi import Request, APIRouter
 import uuid
 from pathlib import Path
+from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import FileResponse
+import requests
 
 # Get API key with error handling
 api_key = os.getenv("OPENAI_API_KEY")
@@ -11,40 +14,8 @@ if not api_key:
 
 # Initialize OpenAI client
 client = OpenAI(api_key=api_key)
-###
-#   let conversationHistory = [
-#            {"role": "system", "content": "You are a helpful assistant."}
-#        ];
-# update conversationHistory to include the user message and assistant response    
-# conversationHistory.push({
-#                 "role": "user",
-#                 "content": transcriptionResult.transcription
-#             });
-# 
 
-# #   Send the transcription to the server for chat completion
-#  const chatResponse = await fetch('/chat', {
-#                     method: 'POST',
-#                     headers: {
-#                         'Content-Type': 'application/json',
-#                     },
-#                     body: JSON.stringify({
-#                         message: transcriptionResult.transcription,
-#                         conversation_history: conversationHistory
-#                     })
-#                 });
-
-#                 const chatResult = await chatResponse.json();
-                
-#      Add assistant's response to conversation history
-#                 conversationHistory.push({
-#                     "role": "assistant",
-#                     "content": chatResult.response
-#                 });
-
-###
-
-
+router = APIRouter()
 
 @app.post("/chat")
 async def chat_completion(request: Request):
@@ -83,5 +54,72 @@ async def chat_completion(request: Request):
             "response": response_text,
             "audio_url": f"/uploads/audio/{speech_file_name}"
         }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    try:
+        # Create a temporary file to store the uploaded audio
+        with open(f"temp_{file.filename}", "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Open and transcribe the audio file
+        with open(f"temp_{file.filename}", "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+        
+        # Clean up the temporary file
+        os.remove(f"temp_{file.filename}")
+        
+        return {"status": "success", "transcription": transcription.text}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@router.get("/runpod_get/{text}")
+async def runpod_get(text: str):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer rpa_0M3LBM21PJE4T60JP9Q6253OMVYY4V8GH5D88KSI169nw6'
+    }
+
+    data = {
+        'input': {"prompt": text}
+    }
+
+    response = requests.post('https://api.runpod.ai/v2/c7nwlf5x14trj0/runsync', headers=headers, json=data)
+    print(response.json())
+    return response.json()
+
+
+@router.post("/runpod_post")
+async def runpod_post(request: Request):
+    try:
+        # Parse the JSON body from the request
+        data = await request.json()
+        prompt = data.get("prompt")
+        
+        if not prompt:
+            return {"status": "error", "message": "Prompt is required"}
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer rpa_0M3LBM21PJE4T60JP9Q6253OMVYY4V8GH5D88KSI169nw6'
+        }
+
+        payload = {
+            'input': {"prompt": prompt}
+        }
+
+        # Make the POST request to the RunPod API
+        response = requests.post('https://api.runpod.ai/v2/86jxoe64tyzxb6/runsync', headers=headers, json=payload)
+        response_data = response.json()
+        
+        return response_data
     except Exception as e:
         return {"status": "error", "message": str(e)}
